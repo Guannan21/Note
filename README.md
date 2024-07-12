@@ -1,53 +1,41 @@
-import flex.messaging.io.MessageIOConstants;
-import flex.messaging.io.amf.ActionMessage;
+import flex.messaging.io.amf.ASObject;
 import flex.messaging.io.amf.Amf3Output;
-import flex.messaging.messages.RemotingMessage;
+import flex.messaging.io.amf.MessageBody;
+import flex.messaging.io.SerializationContext;
 
 import java.io.ByteArrayOutputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 
-public class AmfRequestToFile {
+public class SimpleAmfRequestCreator {
+
     public static void main(String[] args) {
         try {
-            byte[] amfRequest = createAmfRequest();
-            writeToFile(amfRequest, "amfRequestPayload.bin");
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
+            // Create the AMF body with target and response URIs
+            MessageBody body = new MessageBody("someService", "/1", null);
 
-    private static byte[] createAmfRequest() throws IOException {
-        // Create the ActionMessage
-        ActionMessage message = new ActionMessage(MessageIOConstants.AMF3);
+            // Create an ASObject and add sample data
+            ASObject asObject = new ASObject();
+            asObject.put("param1", "value1");
+            asObject.put("param2", 12345);
 
-        // Create a RemotingMessage
-        RemotingMessage remotingMessage = new RemotingMessage();
-        remotingMessage.setDestination("yourDestination");
-        remotingMessage.setOperation("yourOperation");
-        remotingMessage.setSource("yourSource");
+            // Set the ASObject as the body data
+            body.setData(asObject);
 
-        // Add any parameters to the remoting message
-        Object[] parameters = new Object[]{"param1", "param2"};
-        remotingMessage.setBody(parameters);
+            // Serialize the AMF body to a byte array
+            ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+            Amf3Output amf3Output = new Amf3Output(SerializationContext.getSerializationContext());
+            amf3Output.setOutputStream(byteArrayOutputStream);
+            amf3Output.writeObject(body);
+            byte[] amfRequestPayload = byteArrayOutputStream.toByteArray();
 
-        // Add the RemotingMessage to the ActionMessage
-        message.addBody(remotingMessage);
+            // Save the serialized payload to a file
+            try (FileOutputStream fos = new FileOutputStream("amf_request_payload.bin")) {
+                fos.write(amfRequestPayload);
+            }
 
-        // Serialize the ActionMessage to a byte array
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        Amf3Output amf3Output = new Amf3Output();
-        amf3Output.setOutputStream(outputStream);
-        amf3Output.writeObject(message);
+            System.out.println("AMF Request Payload saved to amf_request_payload.bin");
 
-        // Get the byte array
-        return outputStream.toByteArray();
-    }
-
-    private static void writeToFile(byte[] data, String fileName) {
-        try (FileOutputStream fos = new FileOutputStream(fileName)) {
-            fos.write(data);
-            System.out.println("AMF request payload written to " + fileName);
         } catch (IOException e) {
             e.printStackTrace();
         }
