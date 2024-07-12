@@ -4,9 +4,20 @@ import flex.messaging.io.amf.Amf3Output;
 import flex.messaging.messages.RemotingMessage;
 
 import java.io.ByteArrayOutputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
 
-public class AmfRequestCreator {
-    public static void main(String[] args) throws Exception {
+public class AmfRequestToFile {
+    public static void main(String[] args) {
+        try {
+            byte[] amfRequest = createAmfRequest();
+            writeToFile(amfRequest, "amfRequestPayload.bin");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static byte[] createAmfRequest() throws IOException {
         // Create the ActionMessage
         ActionMessage message = new ActionMessage(MessageIOConstants.AMF3);
 
@@ -30,9 +41,15 @@ public class AmfRequestCreator {
         amf3Output.writeObject(message);
 
         // Get the byte array
-        byte[] amfRequest = outputStream.toByteArray();
+        return outputStream.toByteArray();
+    }
 
-        // Now you can send the amfRequest to your server
-        System.out.println("AMF Request Payload: " + java.util.Arrays.toString(amfRequest));
+    private static void writeToFile(byte[] data, String fileName) {
+        try (FileOutputStream fos = new FileOutputStream(fileName)) {
+            fos.write(data);
+            System.out.println("AMF request payload written to " + fileName);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }
